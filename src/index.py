@@ -1,28 +1,11 @@
-# import streamlit as st
-# import pandas as pd
-# import altair as alt
-# import plotly.express as px
-#
-# ##Configuring Page
-# st.set_page_config(
-#     page_title= "US Population Dashboard",
-#     layout= "wide",
-#     initial_sidebar_state="expanded"
-# )
-# alt.themes.enable("dark")
-#
-# # df_reshaped = pd.read_csv('data/20102019population.csv')
-#
-#
-from gc import collect
-from idlelib.iomenu import errors
-from operator import index
-from xxlimited_35 import error
-
 import streamlit as st
 import pandas as pd
 import altair as alt
 import plotly.express as px
+from PIL.ImageColor import colormap
+from numpy.ma.core import zeros
+from pandas import wide_to_long
+from streamlit import title
 
 # Configure Streamlit page
 st.set_page_config(
@@ -76,3 +59,47 @@ filterd_df = df_reshaped[
     (df_reshaped['year'].between(selected_years[0] , selected_years[1]))
 ]
 
+if not selected_states:
+    st.warning("Please select at least one state to display data")
+else:
+    col1 , col2 = st.columns(2)
+
+    with col1:
+        st.subheader("Population Trend by State")
+        line_chart = alt.Chart(filterd_df).mark_line(point =True).encode(
+            x = alt.X('year:O' , title = 'Year'),
+            y = alt.Y('population:Q' , title = 'Population' ,scale = alt.Scale(zero = False)),
+            color = 'states:N',
+            tooltip = ['states' , 'year' , 'population']
+        ).properties(
+            width = 600,
+            height = 400,
+            title = "Population Trend (2010=2019)"
+        )
+        st.altair_chart(line_chart,use_container_width=True)
+
+    with col2:
+        st.subheader(f"Population in {selected_years[1]}")
+        bar_df = filterd_df[filterd_df['year'] == selected_years[1]]
+        fig = px.bar(
+            bar_df,
+            x = 'states',
+            y = 'population',
+            color = 'states',
+            title = f"Population by state in {selected_years[1]}",
+            width = 600,
+            height = 400
+    )
+    st.plotly_chart(fig,use_container_width=True)
+
+#Summery statistic
+st.subheader("Summery Statistics")
+summary = filterd_df.groupby('states').agg({
+    'population': ['mean', 'min', 'max']
+}).round(0).astype(int)
+summary.columns = ['Average Population', 'Min Population', 'Max Population']
+st.dataframe(summary , use_container_width=True)
+
+#Display filtered data table
+st.subheader("Filtered Table")
+st.dataframe(filterd_df[['states' , 'year' , 'population']],use_container_width=True)
